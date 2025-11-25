@@ -3,387 +3,281 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Be Ur Sulf - Modern Essentials</title>
-    <!-- Load Tailwind CSS via CDN -->
+    <title>Camera Color Catcher</title>
+    <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Load Inter Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
     <style>
-        /* Custom CSS for brand feel */
-        :root {
-            --primary: #1F2937; /* Dark Grey */
-            --secondary: #FDE047; /* Bright Yellow */
-            --text-light: #F9FAFB;
-        }
-
+        /* Define the font for a modern look */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: var(--primary);
-            color: var(--text-light);
         }
-        .btn-primary {
-            background-color: var(--secondary);
-            color: var(--primary);
-            transition: all 0.2s;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+        /* Custom styles for the pointer/crosshair on the canvas */
+        .color-canvas {
+            cursor: crosshair;
+            display: block;
+            max-width: 100%;
+            height: auto;
+            border: 4px solid #10b981; /* Emerald border for captured image */
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
         }
-        .btn-primary:hover {
-            opacity: 0.9;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-        }
-        /* Style for the modal (hidden by default) */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
-            display: none; /* Hidden by default */
-            align-items: center;
-            justify-content: center;
-            z-index: 50;
-        }
-        .modal-content {
-            background-color: var(--text-light);
-            color: var(--primary);
-            max-width: 90%;
-            max-height: 90%;
-            overflow-y: auto;
+        /* Style for the video feed before capture */
+        #videoFeed {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            object-fit: contain;
+            border: 4px solid #6366f1; /* Indigo border for live feed */
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
         }
     </style>
 </head>
-<body class="min-h-screen">
+<body class="bg-gray-50 min-h-screen p-4 md:p-8">
 
-    <!-- Navbar -->
-    <header class="sticky top-0 z-10 bg-gray-900 shadow-xl">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-            <h1 class="text-3xl font-extrabold tracking-widest text-white">BE UR SULF</h1>
-            <button id="cart-button" class="flex items-center space-x-2 p-2 rounded-lg btn-primary" onclick="openCheckoutModal()">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.023.824l.797 4.79c.11.666.598 1.154 1.255 1.265l10.297 1.716c1.025.17 1.945.748 2.378 1.638L21.75 16.5m-19.5 0A2.25 2.25 0 0 1 5.25 18h14.25a2.25 2.25 0 0 0 2.25-2.25V13.5m-19.5 0V7.252A4.2 4.2 0 0 1 4.5 9h15a4.2 4.2 0 0 0 2.25-1.748V13.5M10.5 20.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm7.5-.75a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Z" />
-                </svg>
-                <span id="cart-count" class="font-bold text-lg">0</span>
+    <div class="max-w-4xl mx-auto bg-white p-6 md:p-10 rounded-xl shadow-2xl space-y-6">
+        <h1 class="text-3xl font-extrabold text-gray-900 text-center">
+            📸 Color Catcher App
+        </h1>
+        <p class="text-center text-gray-600">
+            Click 'Start Camera' to begin, 'Capture Photo' to freeze the image, then click anywhere on the photo to sample the color code.
+        </p>
+
+        <!-- Main Media Area: Live Video Feed (initially shown) and Canvas (after capture) -->
+        <div class="flex flex-col items-center space-y-4">
+
+            <!-- Video element for live feed -->
+            <video id="videoFeed" class="w-full rounded-lg" autoplay playsinline muted hidden></video>
+
+            <!-- Canvas element for the captured image (where color picking happens) -->
+            <canvas id="colorCanvas" class="color-canvas w-full rounded-lg" style="display: none;"></canvas>
+
+            <!-- Error/Status Message Box -->
+            <div id="statusMessage" class="w-full text-center p-3 rounded-lg text-sm bg-blue-100 text-blue-700 font-medium">
+                Waiting for user action...
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex justify-center space-x-4 pt-4">
+            <button id="startCameraButton" class="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-full hover:bg-indigo-700 transition duration-150 shadow-lg">
+                Start Camera
+            </button>
+            <button id="captureButton" class="px-6 py-3 bg-emerald-500 text-white font-semibold rounded-full hover:bg-emerald-600 transition duration-150 shadow-lg" disabled>
+                Capture Photo
+            </button>
+            <button id="resetButton" class="px-6 py-3 bg-gray-400 text-white font-semibold rounded-full hover:bg-gray-500 transition duration-150 shadow-lg" disabled>
+                Reset
             </button>
         </div>
-    </header>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <!-- Color Output Area -->
+        <div class="pt-8 space-y-4">
+            <h2 class="text-xl font-bold text-gray-800">
+                Picked Color
+            </h2>
+            <div class="flex items-center space-x-4 bg-gray-100 p-4 rounded-xl border border-gray-200">
+                <!-- Visual Color Swatch -->
+                <div id="colorSwatch" class="w-16 h-16 rounded-lg border-2 border-gray-300 transition-all duration-300" style="background-color: #FFFFFF;"></div>
 
-        <!-- Hero Section -->
-        <section class="text-center py-20 mb-12 bg-gray-800 rounded-xl shadow-2xl">
-            <h2 class="text-5xl md:text-7xl font-bold mb-4 text-white">Find Your Fit. Be Ur Sulf.</h2>
-            <p class="text-xl text-gray-400 max-w-2xl mx-auto">Minimalist, premium quality apparel designed for comfort and durability. Style that speaks quietly.</p>
-            <a href="#products" class="mt-8 inline-block px-8 py-3 rounded-xl font-semibold text-lg btn-primary shadow-xl">Shop Now</a>
-        </section>
-
-        <!-- Product Listing Section -->
-        <section id="products" class="pb-16">
-            <h2 class="text-4xl font-bold mb-10 text-center text-white">Essential Collection</h2>
-            <div id="product-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <!-- Product 1: The Core Tee -->
-                <div class="product-card bg-gray-800 p-6 rounded-xl shadow-lg hover:shadow-2xl transition duration-300 transform hover:scale-[1.02]" data-id="T001" data-name="The Core Tee - Black" data-price="35.00">
-                    <img src="https://placehold.co/600x400/1F2937/FDE047?text=Core+Tee" onerror="this.src='https://placehold.co/600x400/1F2937/FDE047?text=Core+Tee'" class="w-full h-64 object-cover mb-4 rounded-lg border-2 border-gray-700" alt="Core Tee">
-                    <h3 class="text-2xl font-semibold text-white mb-2">The Core Tee</h3>
-                    <p class="text-gray-400 mb-3">Premium cotton, heavy-weight feel. Timeless black.</p>
-                    <p class="text-3xl font-extrabold text-secondary mb-4">$35.00</p>
-                    <button class="w-full py-3 rounded-lg btn-primary add-to-cart-btn" data-id="T001">Add to Cart</button>
-                </div>
-
-                <!-- Product 2: The Selvedge Denim -->
-                <div class="product-card bg-gray-800 p-6 rounded-xl shadow-lg hover:shadow-2xl transition duration-300 transform hover:scale-[1.02]" data-id="D002" data-name="Selvedge Denim - Indigo" data-price="120.00">
-                    <img src="https://placehold.co/600x400/1F2937/FDE047?text=Denim" onerror="this.src='https://placehold.co/600x400/1F2937/FDE047?text=Denim'" class="w-full h-64 object-cover mb-4 rounded-lg border-2 border-gray-700" alt="Selvedge Denim">
-                    <h3 class="text-2xl font-semibold text-white mb-2">The Selvedge Denim</h3>
-                    <p class="text-gray-400 mb-3">Raw indigo denim, straight fit. Built to last.</p>
-                    <p class="text-3xl font-extrabold text-secondary mb-4">$120.00</p>
-                    <button class="w-full py-3 rounded-lg btn-primary add-to-cart-btn" data-id="D002">Add to Cart</button>
-                </div>
-
-                <!-- Product 3: The Minimalist Hoodie -->
-                <div class="product-card bg-gray-800 p-6 rounded-xl shadow-lg hover:shadow-2xl transition duration-300 transform hover:scale-[1.02]" data-id="H003" data-name="Minimalist Hoodie - Grey" data-price="80.00">
-                    <img src="https://placehold.co/600x400/1F2937/FDE047?text=Hoodie" onerror="this.src='https://placehold.co/600x400/1F2937/FDE047?text=Hoodie'" class="w-full h-64 object-cover mb-4 rounded-lg border-2 border-gray-700" alt="Minimalist Hoodie">
-                    <h3 class="text-2xl font-semibold text-white mb-2">The Minimalist Hoodie</h3>
-                    <p class="text-gray-400 mb-3">Soft fleece interior, hidden drawstring. Fog grey.</p>
-                    <p class="text-3xl font-extrabold text-secondary mb-4">$80.00</p>
-                    <button class="w-full py-3 rounded-lg btn-primary add-to-cart-btn" data-id="H003">Add to Cart</button>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Success/Error Message Modal -->
-    <div id="message-modal-overlay" class="modal-overlay">
-        <div id="message-modal-content" class="modal-content p-8 rounded-xl w-full max-w-sm text-center">
-            <h3 id="message-title" class="text-2xl font-bold mb-4"></h3>
-            <p id="message-text" class="mb-6"></p>
-            <button class="py-2 px-4 rounded-lg btn-primary" onclick="closeMessageModal()">Close</button>
-        </div>
-    </div>
-
-    <!-- Checkout Modal -->
-    <div id="checkout-modal-overlay" class="modal-overlay">
-        <div class="modal-content p-8 rounded-xl shadow-2xl w-full max-w-xl">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-3xl font-bold">Your Cart</h3>
-                <button class="text-gray-500 hover:text-gray-900" onclick="closeCheckoutModal()">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-
-            <!-- Cart Summary -->
-            <div id="cart-items" class="space-y-4 border-b pb-4 mb-4">
-                <!-- Cart items will be injected here -->
-            </div>
-
-            <div class="flex justify-between items-center text-xl font-bold mb-6">
-                <span>Total:</span>
-                <span id="cart-total-display" class="text-secondary">$0.00</span>
-            </div>
-
-            <h4 class="text-xl font-bold mb-4">Shipping Information</h4>
-            <form id="checkout-form" class="space-y-4">
+                <!-- Color Code Display -->
                 <div>
-                    <label for="customer_name" class="block text-sm font-medium mb-1">Full Name</label>
-                    <input type="text" id="customer_name" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-secondary focus:border-secondary transition">
+                    <span class="text-sm font-medium text-gray-500">HEX Code:</span>
+                    <p id="hexCodeDisplay" class="text-2xl font-mono font-bold text-gray-800 select-all">#FFFFFF</p>
                 </div>
-                <div>
-                    <label for="customer_phone" class="block text-sm font-medium mb-1">Phone Number</label>
-                    <input type="tel" id="customer_phone" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-secondary focus:border-secondary transition">
-                </div>
-                <div>
-                    <label for="customer_address" class="block text-sm font-medium mb-1">Shipping Address (Full)</label>
-                    <textarea id="customer_address" rows="3" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-secondary focus:border-secondary transition"></textarea>
-                </div>
-
-                <div class="pt-4">
-                    <button type="submit" class="w-full py-3 rounded-lg font-semibold text-lg btn-primary">
-                        Place Order & Get Invoice
-                    </button>
-                    <p class="text-xs text-center text-gray-600 mt-2">
-                        You will be contacted via phone to confirm your order details.
-                    </p>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
 
     <script>
-        // --- Configuration for Google Form Submission ---
-        // !!! IMPORTANT !!!
-        // You MUST replace this URL and the field names below with YOUR Google Form details.
-        // See the instructions following this code block.
+        // Global references
+        const video = document.getElementById('videoFeed');
+        const canvas = document.getElementById('colorCanvas');
+        const ctx = canvas.getContext('2d');
+        const startButton = document.getElementById('startCameraButton');
+        const captureButton = document.getElementById('captureButton');
+        const resetButton = document.getElementById('resetButton');
+        const statusMessage = document.getElementById('statusMessage');
+        const colorSwatch = document.getElementById('colorSwatch');
+        const hexCodeDisplay = document.getElementById('hexCodeDisplay');
 
-        // 1. Placeholder Google Form action URL (REPLACE THIS)
-        const GOOGLE_FORM_URL = 'https://docs.google.com/forms/d/e/YOUR_FORM_ID/formResponse';
+        let stream = null; // To hold the camera stream globally
+        let isCaptured = false; // State flag
 
-        // 2. Placeholder Field Names (REPLACE THESE with your Form's entry IDs)
-        // You need to inspect your Google Form to find the 'entry.XXXXXXXXXX' ID for each field.
-        const ENTRY_IDS = {
-            name: 'entry.1234567890',    // Example ID for Full Name
-            phone: 'entry.0987654321',   // Example ID for Phone Number
-            address: 'entry.1122334455', // Example ID for Shipping Address
-            orderSummary: 'entry.5544332211', // Example ID for the hidden Order Summary/Price field
-        };
-        // ------------------------------------------------------------------
+        // Utility function to convert RGB to Hex
+        function rgbToHex(r, g, b) {
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+        }
 
-        let cart = [];
+        // Function to update the status message
+        function updateStatus(text, type = 'info') {
+            const classes = {
+                'info': 'bg-blue-100 text-blue-700',
+                'success': 'bg-green-100 text-green-700',
+                'error': 'bg-red-100 text-red-700'
+            };
+            statusMessage.className = `w-full text-center p-3 rounded-lg text-sm font-medium ${classes[type]}`;
+            statusMessage.textContent = text;
+        }
 
-        // Utility function to format currency
-        const formatPrice = (price) => `$${parseFloat(price).toFixed(2)}`;
+        // --- Step 1: Start Camera Access ---
+        startButton.addEventListener('click', async () => {
+            try {
+                // Request access to the user's camera (video only)
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                video.srcObject = stream;
+                video.hidden = false;
+                canvas.style.display = 'none';
+                isCaptured = false;
 
-        // Get elements once
-        const cartCountEl = document.getElementById('cart-count');
-        const cartItemsEl = document.getElementById('cart-items');
-        const cartTotalDisplayEl = document.getElementById('cart-total-display');
-        const checkoutModalOverlay = document.getElementById('checkout-modal-overlay');
-        const messageModalOverlay = document.getElementById('message-modal-overlay');
+                // Wait for the video to load metadata (including intrinsic size)
+                await new Promise(resolve => video.onloadedmetadata = resolve);
+                video.play();
 
-        // Initial setup for Add to Cart buttons
-        document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('.add-to-cart-btn').forEach(button => {
-                button.addEventListener('click', (event) => {
-                    const productId = event.target.getAttribute('data-id');
-                    const productCard = document.querySelector(`.product-card[data-id="${productId}"]`);
-                    if (productCard) {
-                        const name = productCard.getAttribute('data-name');
-                        const price = parseFloat(productCard.getAttribute('data-price'));
-                        addItemToCart(productId, name, price);
-                    }
-                });
-            });
+                updateStatus('Camera feed active. Click "Capture Photo" when ready.', 'success');
+                startButton.disabled = true;
+                captureButton.disabled = false;
+                resetButton.disabled = false;
 
-            document.getElementById('checkout-form').addEventListener('submit', handleCheckout);
+                // Reset color picker state
+                colorSwatch.style.backgroundColor = '#FFFFFF';
+                hexCodeDisplay.textContent = '#FFFFFF';
+
+            } catch (err) {
+                console.error('Error accessing camera:', err);
+                updateStatus('Camera access denied or failed. Check permissions.', 'error');
+                startButton.disabled = false;
+                captureButton.disabled = true;
+                resetButton.disabled = true;
+                video.hidden = true;
+            }
         });
 
-        // --- Cart Management Functions ---
-
-        function addItemToCart(id, name, price) {
-            const existingItem = cart.find(item => item.id === id);
-
-            if (existingItem) {
-                existingItem.quantity += 1;
-            } else {
-                cart.push({ id, name, price, quantity: 1 });
-            }
-            updateCartUI();
-            showMessageModal('Added to Cart!', `${name} has been added to your cart.`, 'success');
-        }
-
-        function removeItemFromCart(id) {
-            const itemIndex = cart.findIndex(item => item.id === id);
-            if (itemIndex > -1) {
-                cart.splice(itemIndex, 1);
-                updateCartUI();
-            }
-        }
-
-        function updateQuantity(id, change) {
-            const item = cart.find(item => item.id === id);
-            if (item) {
-                item.quantity += change;
-                if (item.quantity <= 0) {
-                    removeItemFromCart(id);
-                }
-                updateCartUI();
-            }
-        }
-
-        function getCartTotal() {
-            return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
-        }
-
-        function updateCartUI() {
-            const total = getCartTotal();
-            const itemCount = cart.reduce((count, item) => count + item.quantity, 0);
-
-            cartCountEl.textContent = itemCount;
-            cartTotalDisplayEl.textContent = formatPrice(total);
-            cartItemsEl.innerHTML = ''; // Clear existing items
-
-            if (cart.length === 0) {
-                cartItemsEl.innerHTML = '<p class="text-center text-gray-500 py-4">Your cart is empty.</p>';
+        // --- Step 2: Capture Image ---
+        captureButton.addEventListener('click', () => {
+            if (!stream || !video.srcObject) {
+                updateStatus('Please start the camera first.', 'error');
                 return;
             }
 
-            // Render each item in the cart
-            cart.forEach(item => {
-                const itemTotal = item.price * item.quantity;
-                const itemHtml = `
-                    <div class="flex items-center justify-between p-3 rounded-lg bg-gray-100 shadow-sm">
-                        <div class="flex-1 min-w-0">
-                            <p class="font-semibold text-lg">${item.name}</p>
-                            <p class="text-sm text-gray-600">${formatPrice(item.price)} x ${item.quantity}</p>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <button class="text-gray-500 hover:text-gray-900 font-bold p-1 rounded-full border-2 border-gray-300 w-8 h-8 flex items-center justify-center" onclick="updateQuantity('${item.id}', -1)">-</button>
-                            <span class="font-bold">${item.quantity}</span>
-                            <button class="text-gray-500 hover:text-gray-900 font-bold p-1 rounded-full border-2 border-gray-300 w-8 h-8 flex items-center justify-center" onclick="updateQuantity('${item.id}', 1)">+</button>
-                        </div>
-                        <span class="font-bold ml-4 w-20 text-right">${formatPrice(itemTotal)}</span>
-                    </div>
-                `;
-                cartItemsEl.insertAdjacentHTML('beforeend', itemHtml);
-            });
-        }
+            // Set canvas dimensions to match the video feed
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
 
-        // --- Modal Functions ---
+            // Draw the current video frame onto the canvas
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        function openCheckoutModal() {
-            if (cart.length === 0) {
-                showMessageModal('Cart Empty', 'Please add items to your cart before proceeding to checkout.', 'info');
-                return;
-            }
-            updateCartUI();
-            checkoutModalOverlay.style.display = 'flex';
-        }
-
-        function closeCheckoutModal() {
-            checkoutModalOverlay.style.display = 'none';
-        }
-
-        function showMessageModal(title, text, type) {
-            const titleEl = document.getElementById('message-title');
-            const textEl = document.getElementById('message-text');
-            
-            titleEl.textContent = title;
-            textEl.textContent = text;
-
-            // Simple styling change based on message type
-            if (type === 'success') {
-                titleEl.classList.add('text-green-600');
-                titleEl.classList.remove('text-red-600', 'text-blue-600');
-            } else if (type === 'error') {
-                titleEl.classList.add('text-red-600');
-                titleEl.classList.remove('text-green-600', 'text-blue-600');
-            } else { // info
-                titleEl.classList.add('text-blue-600');
-                titleEl.classList.remove('text-green-600', 'text-red-600');
+            // Stop the video stream
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
             }
 
-            messageModalOverlay.style.display = 'flex';
-        }
+            // Toggle visibility
+            video.hidden = true;
+            canvas.style.display = 'block';
+            isCaptured = true;
 
-        function closeMessageModal() {
-            messageModalOverlay.style.display = 'none';
-        }
+            updateStatus('Photo captured. Click on the image to pick a color.', 'success');
+            captureButton.disabled = true;
+            startButton.disabled = true;
+        });
 
-        // --- Google Form Submission (Checkout Logic) ---
+        // --- Step 3: Color Catcher Logic (Click Listener) ---
+        canvas.addEventListener('click', (event) => {
+            if (!isCaptured) return;
 
-        async function handleCheckout(event) {
-            event.preventDefault();
+            // 1. Calculate click coordinates relative to the canvas
+            const rect = canvas.getBoundingClientRect();
+            // Get click position relative to the scaled canvas
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
 
-            if (cart.length === 0) {
-                showMessageModal('Error', 'Your cart is empty! Cannot place an empty order.', 'error');
-                return;
-            }
+            const x = Math.floor((event.clientX - rect.left) * scaleX);
+            const y = Math.floor((event.clientY - rect.top) * scaleY);
 
-            const name = document.getElementById('customer_name').value;
-            const phone = document.getElementById('customer_phone').value;
-            const address = document.getElementById('customer_address').value;
-            const total = getCartTotal();
-
-            // Create a detailed summary string for the spreadsheet
-            const orderSummaryString = cart.map(item =>
-                `${item.name} (${item.id}) x ${item.quantity} @ ${formatPrice(item.price)}`
-            ).join(' | ') + ` | TOTAL: ${formatPrice(total)}`;
-
-            closeCheckoutModal(); // Close the form modal
-            showMessageModal('Processing...', 'We are submitting your order now.', 'info');
-
-            // Data to be sent to Google Form
-            const formData = new FormData();
-            formData.append(ENTRY_IDS.name, name);
-            formData.append(ENTRY_IDS.phone, phone);
-            formData.append(ENTRY_IDS.address, address);
-            formData.append(ENTRY_IDS.orderSummary, orderSummaryString); // The 'price' field holds the full order summary
-
+            // 2. Read the pixel data at the coordinates (4 bytes: R, G, B, A)
             try {
-                // We use mode: 'no-cors' because Google Forms does not send back 
-                // CORS headers, but the form submission will still succeed.
-                const response = await fetch(GOOGLE_FORM_URL, {
-                    method: 'POST',
-                    body: formData,
-                    mode: 'no-cors'
-                });
+                const pixelData = ctx.getImageData(x, y, 1, 1).data;
+                const r = pixelData[0];
+                const g = pixelData[1];
+                const b = pixelData[2];
 
-                // The response is usually opaque (due to no-cors), so we check for fetch success only.
-                if (response || !response) { // Assume success if fetch didn't throw an error
-                    showMessageModal('Order Placed!', 'Thank you for your purchase! Your order has been successfully logged. We will contact you soon.', 'success');
-                    cart = []; // Clear cart on successful submission
-                    updateCartUI();
-                    document.getElementById('checkout-form').reset();
-                } else {
-                    // This block might be hard to reach due to 'no-cors' but good practice
-                    throw new Error("Form submission failed.");
-                }
+                const hex = rgbToHex(r, g, b);
 
-            } catch (error) {
-                console.error('Submission Error:', error);
-                showMessageModal('Submission Failed', 'There was an error logging your order. Please try again or contact us directly.', 'error');
+                // 3. Display the results
+                colorSwatch.style.backgroundColor = hex;
+                hexCodeDisplay.textContent = hex;
+                updateStatus(`Color captured at (${x}, ${y}): ${hex}. Click to copy!`, 'success');
+
+                // 4. (Simple Zoom/Pointer effect): Draw a crosshair/circle on the canvas
+                // To visually confirm the selection point, we'll momentarily draw a red circle.
+                // We redraw the whole image first to clear the old marker, but since the
+                // image is static, we can just save/restore the context.
+                
+                // Redraw the original image (or just use save/restore context)
+                ctx.putImageData(ctx.getImageData(0, 0, canvas.width, canvas.height), 0, 0);
+
+                // Draw the pointer
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, 2 * Math.PI); // 5-pixel radius circle
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, 2 * Math.PI);
+                ctx.strokeStyle = '#FF0000'; // Red dot in the center
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+            } catch (e) {
+                console.error("Error reading image data:", e);
+                updateStatus('Could not read pixel data. Ensure the image is fully drawn.', 'error');
             }
-        }
+        });
+
+        // --- Copy to Clipboard on Click ---
+        hexCodeDisplay.addEventListener('click', () => {
+             // Use document.execCommand('copy') for compatibility in environments like this iframe
+            const textToCopy = hexCodeDisplay.textContent;
+            const tempInput = document.createElement('input');
+            tempInput.value = textToCopy;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            
+            try {
+                document.execCommand('copy');
+                updateStatus(`Copied ${textToCopy} to clipboard!`, 'info');
+            } catch (err) {
+                updateStatus('Failed to copy to clipboard.', 'error');
+                console.error('Copy failed:', err);
+            }
+            document.body.removeChild(tempInput);
+        });
+
+        // --- Reset Button ---
+        resetButton.addEventListener('click', () => {
+            // Stop stream if active
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+                video.srcObject = null;
+            }
+
+            // Reset UI state
+            video.hidden = true;
+            canvas.style.display = 'none';
+            canvas.width = 1;
+            canvas.height = 1;
+            isCaptured = false;
+
+            startButton.disabled = false;
+            captureButton.disabled = true;
+            resetButton.disabled = true;
+
+            colorSwatch.style.backgroundColor = '#FFFFFF';
+            hexCodeDisplay.textContent = '#FFFFFF';
+            updateStatus('App reset. Click "Start Camera" to begin again.');
+        });
+        
     </script>
 </body>
 </html>
