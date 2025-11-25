@@ -35,22 +35,21 @@
 
     <div class="max-w-4xl mx-auto bg-white p-6 md:p-10 rounded-xl shadow-2xl space-y-6">
         <h1 class="text-3xl font-extrabold text-gray-900 text-center">
-            📸 Color Catcher App
+            📸 Color Catcher test
         </h1>
         <p class="text-center text-gray-600">
             Click 'Start Camera' to begin, 'Capture Photo' to freeze the image, then click anywhere on the photo to sample the color code.
         </p>
 
-        <!-- Main Media Area: Live Video Feed (initially shown) and Canvas (after capture) -->
         <div class="flex flex-col items-center space-y-4">
 
-            <!-- Video element for live feed -->
+       
             <video id="videoFeed" class="w-full rounded-lg" autoplay playsinline muted hidden></video>
 
-            <!-- Canvas element for the captured image (where color picking happens) -->
+
             <canvas id="colorCanvas" class="color-canvas w-full rounded-lg" style="display: none;"></canvas>
 
-            <!-- Error/Status Message Box -->
+   
             <div id="statusMessage" class="w-full text-center p-3 rounded-lg text-sm bg-blue-100 text-blue-700 font-medium">
                 Waiting for user action...
             </div>
